@@ -3,6 +3,7 @@ package middleware
 import (
 	"course-go/config"
 	"course-go/models"
+
 	"log"
 	"os"
 
@@ -26,7 +27,7 @@ func Authenticate() *jwt.GinJWTMiddleware {
 		IdentityKey: identityKey,
 
 		// looking Token header
-		TokenLookup: "header: Authorization",
+		TokenLookup:   "header: Authorization",
 		TokenHeadName: "Bearer",
 
 		IdentityHandler: func(c *gin.Context) interface{} {
@@ -38,7 +39,7 @@ func Authenticate() *jwt.GinJWTMiddleware {
 			if db.First(&user, uint(id.(float64))).RecordNotFound() {
 				return nil
 			}
-			
+
 			return &user
 		},
 
@@ -59,6 +60,8 @@ func Authenticate() *jwt.GinJWTMiddleware {
 			if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password)); err != nil {
 				return nil, jwt.ErrFailedAuthentication
 			}
+			// match := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password))
+			// fmt.Println("Match:   ", match)
 
 			return &user, nil
 		},
@@ -68,7 +71,7 @@ func Authenticate() *jwt.GinJWTMiddleware {
 			if v, ok := data.(*models.User); ok {
 				claims := jwt.MapClaims{
 					identityKey: v.ID,
-					"email": v.Email,
+					"email":     v.Email,
 				}
 
 				return claims

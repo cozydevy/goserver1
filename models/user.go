@@ -28,3 +28,8 @@ func (u *User) GenerateEncryptedPassword() string {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(u.Password), 14)
 	return string(hash)
 }
+
+func (u *User) GenerateEncryptedPassword2(password string) string {
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(hash)
+}

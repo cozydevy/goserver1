@@ -24,17 +24,28 @@ type createUserForm struct {
 }
 
 type updateUserForm struct {
-	Email    string `json:"email" binding:"omitempty,email"`
-	Password string `json:"password" binding:"omitempty,min=8"`
-	Name     string `json:"name"`
-	Role     string `json:"role"`
+	Email       string `json:"email" binding:"omitempty,email"`
+	Password    string `json:"password" binding:"omitempty,min=8"`
+	Newpassword string `json:"newpassword" binding:"omitempty,min=8"`
+	Name        string `json:"name"`
+	Role        string `json:"role"`
 }
 
+type getUserForm struct {
+	Email       string `json:"email"`
+	Password    string `json:"password" binding:"required,min=8"`
+	Newpassword string `json:"newpassword" binding:"required,min=8"`
+	Name        string `json:"name"`
+	Role        string `json:"role"`
+}
 type userResponse struct {
 	ID    uint   `json:"id"`
 	Email string `json:"email"`
 	Name  string `json:"name"`
 	Role  string `json:"role"`
+}
+type userPass struct {
+	Password string `json:"password"`
 }
 
 type usersPaging struct {
@@ -93,12 +104,18 @@ func (u *Users) Create(ctx *gin.Context) {
 }
 
 func (u *Users) Update(ctx *gin.Context) {
+	var users models.User
 
 	var form updateUserForm
-	if err := ctx.ShouldBindJSON(&form); err != nil {
+	var getdata getUserForm
+
+	if err := ctx.ShouldBindJSON(&getdata); err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
+	form.Email = getdata.Email
+	form.Name = getdata.Name
+	form.Role = getdata.Role
 
 	user, err := u.findUserByID(ctx)
 	if err != nil {
@@ -106,11 +123,40 @@ func (u *Users) Update(ctx *gin.Context) {
 		return
 	}
 
-	if form.Password != "" {
+	id := ctx.Param("id")
+
+	u.DB.Find(&users, "id = ?", id)
+	var serializedPass userPass
+	copier.Copy(&serializedPass, &users)
+
+	// if getdata.Password != "" && getdata.Newpassword != "" {
+
+	// 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(getdata.Password)); err != nil {
+	// 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+
+	// 		return
+	// 	} else {
+
+	// 		form.Password = getdata.Newpassword
+	// 		form.Password = user.GenerateEncryptedPassword()
+
+	// 		fmt.Printf(form.Password)
+	// 	}
+
+	// 	if err := u.DB.Model(&user).Update(&form).Error; err != nil {
+	// 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+	// 		return
+	// 	}
+
+	// 	var serializedUser userResponse
+	// 	copier.Copy(&serializedUser, &user)
+	// 	ctx.JSON(http.StatusOK, gin.H{"user": serializedUser})
+	// }
+	if getdata.Password != "" {
 		user.Password = user.GenerateEncryptedPassword()
 	}
 
-	if err := u.DB.Model(&user).Update(&form).Error; err != nil {
+	if err := u.DB.Model(&user).Update(&getdata).Error; err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
@@ -119,7 +165,6 @@ func (u *Users) Update(ctx *gin.Context) {
 	copier.Copy(&serializedUser, &user)
 	ctx.JSON(http.StatusOK, gin.H{"user": serializedUser})
 }
-
 func (u *Users) Delete(ctx *gin.Context) {
 
 	user, err := u.findUserByID(ctx)
