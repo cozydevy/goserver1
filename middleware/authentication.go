@@ -4,6 +4,7 @@ import (
 	"course-go/config"
 	"course-go/models"
 
+	// "fmt"
 	"log"
 	"os"
 
@@ -61,7 +62,8 @@ func Authenticate() *jwt.GinJWTMiddleware {
 				return nil, jwt.ErrFailedAuthentication
 			}
 			// match := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.Password))
-			// fmt.Println("Match:   ", match)
+			// fmt.Println("Match:   ", user.Password+"\n")
+			// fmt.Println("Match:   ", form.Password)
 
 			return &user, nil
 		},

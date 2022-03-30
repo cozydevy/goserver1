@@ -31,6 +31,8 @@ func Serve(r *gin.Engine) {
 	usersGroup.POST("", usersController.Create)
 	usersGroup.GET("/:id", usersController.FindOne)
 	usersGroup.PATCH("/:id", usersController.Update)
+	usersGroup.PATCH("/updateuser/:id", usersController.UpdatebyAdmin)
+
 	usersGroup.DELETE("/:id", usersController.Delete)
 	usersGroup.PATCH("/:id/promote", usersController.Promote)
 	usersGroup.PATCH("/:id/demote", usersController.Demote)

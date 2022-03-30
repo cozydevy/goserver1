@@ -3,6 +3,7 @@ package controllers
 import (
 	"course-go/config"
 	"course-go/models"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Users struct {
@@ -24,17 +26,16 @@ type createUserForm struct {
 }
 
 type updateUserForm struct {
-	Email       string `json:"email" binding:"omitempty,email"`
-	Password    string `json:"password" binding:"omitempty,min=8"`
-	Newpassword string `json:"newpassword" binding:"omitempty,min=8"`
-	Name        string `json:"name"`
-	Role        string `json:"role"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+	Role     string `json:"role"`
 }
 
 type getUserForm struct {
 	Email       string `json:"email"`
-	Password    string `json:"password" binding:"required,min=8"`
-	Newpassword string `json:"newpassword" binding:"required,min=8"`
+	Password    string `json:"password"`
+	Newpassword string `json:"newpassword"`
 	Name        string `json:"name"`
 	Role        string `json:"role"`
 }
@@ -90,6 +91,7 @@ func (u *Users) Create(ctx *gin.Context) {
 	}
 
 	var user models.User
+
 	copier.Copy(&user, &form)
 	user.Password = user.GenerateEncryptedPassword()
 
@@ -102,20 +104,12 @@ func (u *Users) Create(ctx *gin.Context) {
 	copier.Copy(&serializedUser, &user)
 	ctx.JSON(http.StatusCreated, gin.H{"user": serializedUser})
 }
-
-func (u *Users) Update(ctx *gin.Context) {
-	var users models.User
-
+func (u *Users) UpdatebyAdmin(ctx *gin.Context) {
 	var form updateUserForm
-	var getdata getUserForm
-
-	if err := ctx.ShouldBindJSON(&getdata); err != nil {
+	if err := ctx.ShouldBindJSON(&form); err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
-	form.Email = getdata.Email
-	form.Name = getdata.Name
-	form.Role = getdata.Role
 
 	user, err := u.findUserByID(ctx)
 	if err != nil {
@@ -123,46 +117,78 @@ func (u *Users) Update(ctx *gin.Context) {
 		return
 	}
 
-	id := ctx.Param("id")
-
-	u.DB.Find(&users, "id = ?", id)
-	var serializedPass userPass
-	copier.Copy(&serializedPass, &users)
-
-	// if getdata.Password != "" && getdata.Newpassword != "" {
-
-	// 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(getdata.Password)); err != nil {
-	// 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-
-	// 		return
-	// 	} else {
-
-	// 		form.Password = getdata.Newpassword
-	// 		form.Password = user.GenerateEncryptedPassword()
-
-	// 		fmt.Printf(form.Password)
-	// 	}
-
-	// 	if err := u.DB.Model(&user).Update(&form).Error; err != nil {
-	// 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-	// 		return
-	// 	}
-
-	// 	var serializedUser userResponse
-	// 	copier.Copy(&serializedUser, &user)
-	// 	ctx.JSON(http.StatusOK, gin.H{"user": serializedUser})
-	// }
-	if getdata.Password != "" {
+	if form.Password != "" {
 		user.Password = user.GenerateEncryptedPassword()
 	}
 
-	if err := u.DB.Model(&user).Update(&getdata).Error; err != nil {
+	if err := u.DB.Model(&user).Update(&form).Error; err != nil {
 		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
 
 	var serializedUser userResponse
 	copier.Copy(&serializedUser, &user)
+	ctx.JSON(http.StatusOK, gin.H{"user": serializedUser})
+}
+func (u *Users) Update(ctx *gin.Context) {
+	var users models.User
+	var getdata getUserForm
+
+	var form updateUserForm
+	id := ctx.Param("id")
+
+	if err := ctx.ShouldBindJSON(&getdata); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	// u.DB.Find(&users, "id = ?", id)
+
+	db := config.GetDB()
+	if db.Where("id = ?", id).First(&users).RecordNotFound() {
+		fmt.Printf("Found error\n")
+
+		return
+	}
+	if getdata.Email != users.Email {
+		form.Email = getdata.Email
+	}
+
+	form.Name = getdata.Name
+	form.Role = getdata.Role
+
+	var user models.User
+	if getdata.Password != "" || getdata.Newpassword != "" {
+
+		if err := bcrypt.CompareHashAndPassword([]byte(users.Password), []byte(getdata.Password)); err != nil {
+			copier.Copy(&user, &form)
+
+			fmt.Printf("not match\n")
+			fmt.Println("Match:   ", users.Password+"\n")
+			fmt.Println("Match:   ", getdata.Password)
+			return
+		}
+		match := bcrypt.CompareHashAndPassword([]byte(users.Password), []byte(getdata.Password))
+		fmt.Println("Match:   ", match)
+
+		fmt.Println("\nMatch:   ", users.Password+"\n")
+		fmt.Println("Match:   ", getdata.Password)
+		form.Password = getdata.Newpassword
+		copier.Copy(&user, &form)
+
+		form.Password = user.GenerateEncryptedPassword()
+	} else {
+		copier.Copy(&user, &form)
+
+	}
+
+	if err := u.DB.Model(&user).Where("id = ?", id).Update(&form).Error; err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		return
+	}
+
+	var serializedUser userResponse
+	copier.Copy(&serializedUser, &users)
 	ctx.JSON(http.StatusOK, gin.H{"user": serializedUser})
 }
 func (u *Users) Delete(ctx *gin.Context) {
