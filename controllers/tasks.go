@@ -14,13 +14,12 @@ type Tasks struct {
 }
 
 type taskResponse struct {
-	ID        uint   `json:"id"`
-	Name      string `json:"name"`
-	Desc      string `json:"desc"`
-	Objective string `json:"objective"`
-	Status    string `json:"status"`
-	CourseID  uint   `json:"courseId"`
-	Course    struct {
+	ID       uint   `json:"id"`
+	Name     string `json:"name"`
+	Desc     string `json:"desc"`
+	Status   string `json:"status"`
+	CourseID uint   `json:"courseId"`
+	Course   struct {
 		ID   uint   `json:"id"`
 		Name string `json:"name"`
 		Desc string `json:"desc"`
@@ -34,11 +33,9 @@ type taskResponse struct {
 }
 
 type taskCreateResponse struct {
-	ID        uint   `json:"id"`
-	Name      string `json:"name"`
-	Desc      string `json:"desc"`
-	Objective string `json:"objective"`
-	Status    string `json:"status"`
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+	Desc string `json:"desc"`
 }
 
 type allTaskResponse struct {
@@ -48,17 +45,14 @@ type allTaskResponse struct {
 }
 
 type createTaskForm struct {
-	Name      string `form:"name" binding:"required"`
-	Desc      string `form:"desc" binding:"required"`
-	Objective string `form:"objective" binding:"required"`
-	CourseID  uint   `form:"courseId" binding:"required"`
+	Name     string `form:"name" binding:"required"`
+	Desc     string `form:"desc" binding:"required"`
+	CourseID uint   `form:"courseId" binding:"required"`
 }
 
 type updateTaskForm struct {
-	Name      string `form:"name"`
-	Desc      string `form:"desc"`
-	Objective string `form:"objective"`
-	Status    string `form:"status"`
+	Name string `form:"name"`
+	Desc string `form:"desc"`
 }
 
 func (c *Tasks) FindAll(ctx *gin.Context) {
@@ -69,7 +63,6 @@ func (c *Tasks) FindAll(ctx *gin.Context) {
 	copier.Copy(&serializedTask, &tasks)
 	ctx.JSON(http.StatusOK, gin.H{"tasks": serializedTask})
 }
-
 
 func (c *Tasks) FindOne(ctx *gin.Context) {
 	task, err := c.findTaskByID(ctx)
